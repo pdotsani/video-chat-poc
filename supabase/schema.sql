@@ -54,3 +54,28 @@ create policy "Creators can delete items"
   on items for delete
   to authenticated
   using (creator_id = auth.uid());
+
+-- Video chats table: joinable by any authenticated user with the link
+create table if not exists video_chats (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references profiles(id) on delete cascade,
+  title text not null default 'Video Chat',
+  created_at timestamptz default now() not null
+);
+
+alter table video_chats enable row level security;
+
+create policy "Authenticated users can read video chats"
+  on video_chats for select
+  to authenticated
+  using (true);
+
+create policy "Creators can insert video chats"
+  on video_chats for insert
+  to authenticated
+  with check (creator_id = auth.uid());
+
+create policy "Creators can delete video chats"
+  on video_chats for delete
+  to authenticated
+  using (creator_id = auth.uid());

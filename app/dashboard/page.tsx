@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ItemForm from '@/components/ItemForm'
-import ItemList from '@/components/ItemList'
+import CreateVideoChatForm from '@/components/CreateVideoChatForm'
+import DashboardFeed from '@/components/DashboardFeed'
 import SignOutButton from '@/components/SignOutButton'
 
 export default async function DashboardPage() {
@@ -10,7 +11,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const [{ data: items }, { data: profiles }] = await Promise.all([
+  const [{ data: items }, { data: profiles }, { data: videoChats }] = await Promise.all([
     supabase
       .from('items')
       .select('*, creator:profiles!items_creator_id_fkey(full_name, email, avatar_url), recipient:profiles!items_recipient_id_fkey(full_name, email, avatar_url)')
@@ -20,6 +21,10 @@ export default async function DashboardPage() {
       .select('id, full_name, email, avatar_url')
       .neq('id', user.id)
       .order('full_name'),
+    supabase
+      .from('video_chats')
+      .select('id, title, creator_id, created_at')
+      .order('created_at', { ascending: false }),
   ])
 
   return (
@@ -47,14 +52,25 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Create a new item</h2>
-          <ItemForm users={profiles ?? []} currentUserId={user.id} />
-        </section>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <section>
+            <h2 className="text-base font-semibold text-gray-900 mb-3">Create an item</h2>
+            <ItemForm users={profiles ?? []} currentUserId={user.id} />
+          </section>
+
+          <section>
+            <h2 className="text-base font-semibold text-gray-900 mb-3">Start a video chat</h2>
+            <CreateVideoChatForm currentUserId={user.id} />
+          </section>
+        </div>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your items</h2>
-          <ItemList items={items ?? []} currentUserId={user.id} />
+          <h2 className="text-base font-semibold text-gray-900 mb-3">Your feed</h2>
+          <DashboardFeed
+            items={items ?? []}
+            videoChats={videoChats ?? []}
+            currentUserId={user.id}
+          />
         </section>
       </main>
     </div>
